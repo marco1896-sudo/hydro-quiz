@@ -1,15 +1,17 @@
 /*
- * Hydro‑Quiz Application
+ * Grow-Quiz Application (Basis + Profi-Modul)
  *
- * This script controls rendering of the landing page, question flow,
- * evaluation logic, results page and data export. It uses localStorage
- * to persist progress across sessions. The UI is deliberately simple
- * for mobile‑first performance. All calculations are client‑side and
- * personal data is never sent to a server, making the app compliant
- * with basic privacy requirements.
+ * - Basis: normale Module (alle Fragen ohne tier:'pro')
+ * - Profi: 5 Profi-Fragen (nur Fragen mit tier:'pro') über Button am Ende
+ * - Profi-Modus wird über URL-Parameter gesteuert: ?pro=1
+ * - Fortschritt wird über localStorage gespeichert (pro/basis getrennt)
  */
 
 import { questions } from './questions.js';
+
+// Profi-Modus via URL: ?pro=1
+const PRO_MODE = new URLSearchParams(window.location.search).get('pro') === '1';
+const SESSION_KEY = PRO_MODE ? 'hydroQuizSession_pro' : 'hydroQuizSession_base';
 
 // Select the root element where pages are rendered
 const appEl = document.getElementById('app');
@@ -34,12 +36,12 @@ function saveSession() {
     startTime: state.startTime,
     finished: state.finished,
   };
-  localStorage.setItem('hydroQuizSession', JSON.stringify(sessionData));
+  localStorage.setItem(SESSION_KEY, JSON.stringify(sessionData));
 }
 
 // Helper: Load session from localStorage, returning null if none
 function loadSession() {
-  const data = localStorage.getItem('hydroQuizSession');
+  const data = localStorage.getItem(SESSION_KEY);
   if (!data) return null;
   try {
     return JSON.parse(data);
@@ -48,9 +50,10 @@ function loadSession() {
   }
 }
 
-// Helper: Clear session from localStorage
+// Helper: Clear sessions from localStorage (both base and pro)
 function clearSession() {
-  localStorage.removeItem('hydroQuizSession');
+  localStorage.removeItem('hydroQuizSession_base');
+  localStorage.removeItem('hydroQuizSession_pro');
 }
 
 // Get unique modules from questions
@@ -77,16 +80,69 @@ function renderLanding(resumableData = null) {
   container.className = 'container';
 
   const title = document.createElement('h1');
-  title.textContent = 'Grow‑Quiz – Kompetenztest';
+  title.textContent = PRO_MODE ? 'Grow-Quiz – Profi-Modul' : 'Grow-Quiz – Kompetenztest';
   container.appendChild(title);
 
   const intro = document.createElement('p');
-  intro.innerHTML =
-    'Dieser Test bewertet dein Grundwissen über Nährstoffmanagement und Wechselwirkungen. Wähle die Module aus, die du bearbeiten möchtest, oder starte den vollständigen Test.';
+  intro.innerHTML = PRO_MODE
+    ? 'Profi-Modul (5 Fragen): deutlich schwerer, Fokus auf Systemdenken, Antagonismen, Praxislogik und Entscheidungen.'
+    : 'Dieser Test bewertet dein Grundwissen über Nährstoffmanagement und Wechselwirkungen. Wähle die Module aus, die du bearbeiten möchtest, oder starte den vollständigen Test.';
   container.appendChild(intro);
 
-  // Module selection list
   const modules = getUniqueModules();
+
+  // Profi-Modus: keine Modulauswahl nötig, sofort starten (oder fortsetzen)
+  if (PRO_MODE) {
+    state.selectedModules = modules;
+
+    // Fortsetzen im Profi-Modus anbieten, falls vorhanden
+    if (resumableData && !resumableData.finished) {
+      const resumeBtn = document.createElement('button');
+      resumeBtn.textContent = 'Profi-Modul fortsetzen';
+      resumeBtn.addEventListener('click', () => resumeSession(resumableData));
+      container.appendChild(resumeBtn);
+
+      const resetBtn = document.createElement('button');
+      resetBtn.textContent = 'Profi-Modul reset';
+      resetBtn.style.marginLeft = '0.5rem';
+      resetBtn.addEventListener('click', () => {
+        localStorage.removeItem('hydroQuizSession_pro');
+        renderLanding();
+      });
+      container.appendChild(resetBtn);
+
+      const backBtn = document.createElement('button');
+      backBtn.textContent = 'Zurück zum Basis-Test';
+      backBtn.style.marginLeft = '0.5rem';
+      backBtn.addEventListener('click', () => {
+        // Profi-Session behalten oder löschen? -> behalten
+        window.location.search = '';
+      });
+      container.appendChild(backBtn);
+
+      appEl.appendChild(container);
+      return;
+    }
+
+    // Kein Profi-Fortsetzen vorhanden -> direkt starten
+    const startBtn = document.createElement('button');
+    startBtn.textContent = 'Profi-Modul starten';
+    startBtn.addEventListener('click', () => startTest());
+    container.appendChild(startBtn);
+
+    const backBtn = document.createElement('button');
+    backBtn.textContent = 'Zurück zum Basis-Test';
+    backBtn.style.marginLeft = '0.5rem';
+    backBtn.addEventListener('click', () => {
+      window.location.search = '';
+    });
+    container.appendChild(backBtn);
+
+    appEl.appendChild(container);
+    return;
+  }
+
+  // ===== Basis-Modus: Module selection list =====
   const list = document.createElement('ul');
   list.className = 'module-list';
   modules.forEach((mod) => {
@@ -153,7 +209,7 @@ function renderLanding(resumableData = null) {
     resetBtn.textContent = 'Reset';
     resetBtn.style.marginLeft = '0.5rem';
     resetBtn.addEventListener('click', () => {
-      clearSession();
+      localStorage.removeItem('hydroQuizSession_base');
       renderLanding();
     });
     container.appendChild(resetBtn);
@@ -164,10 +220,20 @@ function renderLanding(resumableData = null) {
 
 // Start the test: choose questions, shuffle them, initialize state
 function startTest() {
-  // Filter questions by selected modules
-  state.currentQuestions = questions.filter((q) =>
-    state.selectedModules.includes(q.module)
-  );
+  // Filter questions by selected modules AND by mode (base/pro)
+  state.currentQuestions = questions
+    .filter((q) => state.selectedModules.includes(q.module))
+    .filter((q) => (PRO_MODE ? q.tier === 'pro' : q.tier !== 'pro'));
+
+  // Safety: If no questions match (e.g. pro questions missing), show message and go back
+  if (state.currentQuestions.length === 0) {
+    alert(PRO_MODE
+      ? 'Keine Profi-Fragen gefunden. Bitte prüfe, ob die 5 Profi-Fragen in questions.js tier: "pro" gesetzt haben.'
+      : 'Keine Fragen gefunden. Bitte prüfe deine Module/Fragen.');
+    window.location.search = '';
+    return;
+  }
+
   // Shuffle questions for random order
   state.currentQuestions = shuffle(state.currentQuestions);
   state.currentIndex = 0;
@@ -181,14 +247,23 @@ function startTest() {
 // Resume an existing session stored in localStorage
 function resumeSession(data) {
   state.selectedModules = data.selectedModules;
+
   // reconstruct questions order by IDs
-  state.currentQuestions = data.currentQuestions.map((id) =>
-    questions.find((q) => q.id === id)
-  );
+  state.currentQuestions = data.currentQuestions
+    .map((id) => questions.find((q) => q.id === id))
+    .filter(Boolean);
+
   state.currentIndex = data.currentIndex;
   state.answers = data.answers || [];
   state.startTime = data.startTime;
   state.finished = data.finished;
+
+  // If questions list is empty (e.g. questions changed), restart cleanly
+  if (!state.currentQuestions.length) {
+    startTest();
+    return;
+  }
+
   renderQuestion();
 }
 
@@ -221,7 +296,7 @@ function renderQuestion() {
   h2.textContent = `Frage ${state.currentIndex + 1} von ${state.currentQuestions.length}`;
   header.appendChild(h2);
   const moduleLabel = document.createElement('p');
-  moduleLabel.textContent = `Modul: ${q.module}`;
+  moduleLabel.textContent = `Modul: ${q.module}${PRO_MODE ? ' (Profi)' : ''}`;
   moduleLabel.style.fontStyle = 'italic';
   moduleLabel.style.marginBottom = '0.5rem';
   header.appendChild(moduleLabel);
@@ -235,8 +310,6 @@ function renderQuestion() {
 
   // Options container
   const optionsContainer = document.createElement('div');
-  // For order type we need a draggable list, for others checkboxes/radios
-  let userSelection;
 
   if (q.type === 'single' || q.type === 'scenario') {
     // radio buttons
@@ -278,7 +351,6 @@ function renderQuestion() {
     // Draggable list for ordering
     const ul = document.createElement('ul');
     ul.className = 'sortable-list';
-    // We'll store order by attribute data-id
     q.options.forEach((opt) => {
       const li = document.createElement('li');
       li.textContent = opt.text;
@@ -295,7 +367,7 @@ function renderQuestion() {
         e.target.classList.add('dragging');
       }
     });
-    ul.addEventListener('dragend', (e) => {
+    ul.addEventListener('dragend', () => {
       if (draggedItem) {
         draggedItem.classList.remove('dragging');
         draggedItem = null;
@@ -323,13 +395,14 @@ function renderQuestion() {
     input.placeholder = 'Zahl eingeben';
     optionsContainer.appendChild(input);
   }
+
   container.appendChild(optionsContainer);
 
   // Confidence rating slider
   const confidenceDiv = document.createElement('div');
   confidenceDiv.style.marginTop = '1rem';
   const confLabel = document.createElement('label');
-  confLabel.textContent = 'Wie sicher bist du dir? (1 = unsicher, 5 = sehr sicher)';
+  confLabel.textContent = 'Wie sicher bist du dir? (1 = unsicher, 5 = sehr sicher)';
   confLabel.style.display = 'block';
   const confInput = document.createElement('input');
   confInput.type = 'range';
@@ -349,14 +422,13 @@ function renderQuestion() {
   confidenceDiv.appendChild(confValueSpan);
   container.appendChild(confidenceDiv);
 
-  // Explanation (placeholder) – we don't show explanation until results
-
   // Submit button
   const submitBtn = document.createElement('button');
   submitBtn.textContent = 'Antwort absenden';
   submitBtn.addEventListener('click', () => {
     // Retrieve selected answer(s) depending on type
     let userAnswer;
+
     if (q.type === 'single' || q.type === 'scenario') {
       const checked = optionsContainer.querySelector('input[type="radio"]:checked');
       if (!checked) {
@@ -374,7 +446,6 @@ function renderQuestion() {
     } else if (q.type === 'order') {
       const lis = optionsContainer.querySelectorAll('li');
       userAnswer = Array.from(lis).map((li) => li.dataset.id);
-      // ensure all items used
       if (userAnswer.length !== q.options.length) {
         alert('Bitte ordne alle Elemente.');
         return;
@@ -388,8 +459,10 @@ function renderQuestion() {
       }
       userAnswer = value;
     }
+
     // Confidence rating
     const confidence = parseInt(confInput.value, 10);
+
     // Time spent on this question (in seconds)
     const now = Date.now();
     const timeSpent = (now - state.startTime) / 1000; // seconds
@@ -405,26 +478,29 @@ function renderQuestion() {
         correct = Array.from(ansSet).every((id) => userSet.has(id));
       }
     } else if (q.type === 'order') {
-      // Compare array order exactly
       const correctOrder = q.answer;
-      correct = correctOrder.length === userAnswer.length && correctOrder.every((id, idx) => id === userAnswer[idx]);
+      correct =
+        correctOrder.length === userAnswer.length &&
+        correctOrder.every((id, idx) => id === userAnswer[idx]);
     } else if (q.type === 'calc') {
       const tol = q.answer.tolerance;
       const correctValue = q.answer.value;
       correct = Math.abs(userAnswer - correctValue) <= tol;
     }
+
     // Determine error categories if incorrect
     const errorCategories = correct ? [] : (q.categories || []);
+
     // Determine risk behaviour if defined
     let risk = null;
     if (q.riskProfile) {
       if (q.type === 'single' || q.type === 'scenario') {
         risk = q.riskProfile[userAnswer] || null;
       } else if (q.type === 'multi') {
-        // For multi, record an array of risks
         risk = userAnswer.map((ans) => q.riskProfile[ans] || null);
       }
     }
+
     // Record answer
     state.answers.push({
       questionId: q.id,
@@ -437,20 +513,22 @@ function renderQuestion() {
       categories: errorCategories,
       difficulty: q.difficulty,
       risk,
+      tier: q.tier || 'base',
     });
+
     // Move to next question
     state.currentIndex++;
     state.startTime = now;
     saveSession();
-    // Render next or finish
+
     if (state.currentIndex < state.currentQuestions.length) {
       renderQuestion();
     } else {
       finishTest();
     }
   });
-  container.appendChild(submitBtn);
 
+  container.appendChild(submitBtn);
   appEl.appendChild(container);
 }
 
@@ -475,11 +553,13 @@ function getDragAfterElement(container, y) {
 function finishTest() {
   state.finished = true;
   saveSession();
+
   appEl.innerHTML = '';
   const container = document.createElement('div');
   container.className = 'container';
+
   const h2 = document.createElement('h2');
-  h2.textContent = 'Ergebnisse';
+  h2.textContent = PRO_MODE ? 'Ergebnisse (Profi-Modul)' : 'Ergebnisse';
   container.appendChild(h2);
 
   const totalQuestions = state.currentQuestions.length;
@@ -509,6 +589,7 @@ function finishTest() {
     const modPercent = Math.round((modCorrect / modQuestions.length) * 100);
     subscores[mod] = { correct: modCorrect, total: modQuestions.length, percent: modPercent };
   });
+
   const subTable = document.createElement('table');
   subTable.className = 'results-table';
   let tr = document.createElement('tr');
@@ -518,6 +599,7 @@ function finishTest() {
     tr.appendChild(th);
   });
   subTable.appendChild(tr);
+
   Object.entries(subscores).forEach(([mod, data]) => {
     tr = document.createElement('tr');
     const tdName = document.createElement('td');
@@ -544,6 +626,7 @@ function finishTest() {
       errorCounts[cat]++;
     });
   });
+
   if (Object.keys(errorCounts).length > 0) {
     const errorTitle = document.createElement('h3');
     errorTitle.textContent = 'Fehlerkategorien';
@@ -557,21 +640,23 @@ function finishTest() {
     container.appendChild(ul);
   }
 
-  // Personal feedback: identify strengths and weaknesses
+  // Personal feedback
   const feedbackTitle = document.createElement('h3');
   feedbackTitle.textContent = 'Persönliches Feedback';
   container.appendChild(feedbackTitle);
+
   const feedbackList = document.createElement('ul');
-  // Identify best and worst modules
   let bestMod = null;
   let worstMod = null;
+
   Object.entries(subscores).forEach(([mod, data]) => {
     if (!bestMod || data.percent > subscores[bestMod].percent) bestMod = mod;
     if (!worstMod || data.percent < subscores[worstMod].percent) worstMod = mod;
   });
+
   if (bestMod) {
     const li = document.createElement('li');
-    li.textContent = `Starkes Modul: ${bestMod} (${subscores[bestMod].percent}% richtig).`; 
+    li.textContent = `Starkes Modul: ${bestMod} (${subscores[bestMod].percent}% richtig).`;
     feedbackList.appendChild(li);
   }
   if (worstMod) {
@@ -579,7 +664,7 @@ function finishTest() {
     li.textContent = `Schwächstes Modul: ${worstMod} (${subscores[worstMod].percent}% richtig). Studiere dieses Thema genauer.`;
     feedbackList.appendChild(li);
   }
-  // Highlight top error categories (if any)
+
   const sortedErrors = Object.entries(errorCounts).sort((a, b) => b[1] - a[1]);
   if (sortedErrors.length > 0) {
     const top = sortedErrors[0];
@@ -589,11 +674,12 @@ function finishTest() {
   }
   container.appendChild(feedbackList);
 
-  // Time per module and overall time
+  // Time stats
   const totalTime = state.answers.reduce((sum, a) => sum + a.timeSpent, 0);
   const timeTitle = document.createElement('h3');
   timeTitle.textContent = 'Zeitstatistik';
   container.appendChild(timeTitle);
+
   const timeList = document.createElement('ul');
   modules.forEach((mod) => {
     const modTime = state.answers
@@ -601,21 +687,21 @@ function finishTest() {
       .reduce((sum, a) => sum + a.timeSpent, 0);
     if (modTime > 0) {
       const li = document.createElement('li');
-      li.textContent = `${mod}: ${modTime.toFixed(1)} s`;
+      li.textContent = `${mod}: ${modTime.toFixed(1)} s`;
       timeList.appendChild(li);
     }
   });
   const liTotal = document.createElement('li');
-  liTotal.textContent = `Gesamte Zeit: ${totalTime.toFixed(1)} s`;
+  liTotal.textContent = `Gesamte Zeit: ${totalTime.toFixed(1)} s`;
   timeList.appendChild(liTotal);
   container.appendChild(timeList);
 
-  // Advanced analysis (difficulty and discrimination)
+  // Advanced analysis
   const analysisTitle = document.createElement('h3');
   analysisTitle.textContent = 'Analyse';
   container.appendChild(analysisTitle);
+
   const analysisList = document.createElement('ul');
-  // Average difficulty of correctly answered vs incorrectly answered
   const correctDifficulty = state.answers
     .filter((a) => a.correct)
     .reduce((sum, a) => sum + a.difficulty, 0);
@@ -626,24 +712,27 @@ function finishTest() {
   const numIncorrect = state.answers.filter((a) => !a.correct).length;
   const avgCorrectDiff = numCorrect > 0 ? (correctDifficulty / numCorrect).toFixed(2) : '–';
   const avgIncorrectDiff = numIncorrect > 0 ? (incorrectDifficulty / numIncorrect).toFixed(2) : '–';
+
   const liDiff = document.createElement('li');
   liDiff.textContent = `Durchschnittlicher Schwierigkeitsgrad – richtig: ${avgCorrectDiff}, falsch: ${avgIncorrectDiff}`;
   analysisList.appendChild(liDiff);
-  // Item discrimination placeholder: in single‑user mode we cannot compute discrimination across a cohort. Provide note.
+
   const liDisc = document.createElement('li');
-  liDisc.textContent = 'Item‑Discrimination: Kann erst mit mehreren Teilnehmern berechnet werden.';
+  liDisc.textContent = 'Item-Discrimination: Kann erst mit mehreren Teilnehmern berechnet werden.';
   analysisList.appendChild(liDisc);
-  // Drop‑off rate: Show if user left early; if they completed all, drop‑off is 0
+
   const liDrop = document.createElement('li');
   const dropOff = state.currentIndex < state.currentQuestions.length ? 1 : 0;
-  liDrop.textContent = `Drop‑off‑Rate: ${dropOff === 0 ? 'Keine (komplett absolviert)' : 'Test nicht abgeschlossen'}`;
+  liDrop.textContent = `Drop-off-Rate: ${dropOff === 0 ? 'Keine (komplett absolviert)' : 'Test nicht abgeschlossen'}`;
   analysisList.appendChild(liDrop);
+
   container.appendChild(analysisList);
 
   // Data export buttons
   const exportTitle = document.createElement('h3');
   exportTitle.textContent = 'Datenexport';
   container.appendChild(exportTitle);
+
   const exportCSVBtn = document.createElement('button');
   exportCSVBtn.textContent = 'CSV herunterladen';
   exportCSVBtn.addEventListener('click', () => {
@@ -651,6 +740,7 @@ function finishTest() {
     downloadData(csvContent, filename, 'text/csv;charset=utf-8');
   });
   container.appendChild(exportCSVBtn);
+
   const exportJSONBtn = document.createElement('button');
   exportJSONBtn.textContent = 'JSON herunterladen';
   exportJSONBtn.style.marginLeft = '0.5rem';
@@ -659,7 +749,8 @@ function finishTest() {
     downloadData(jsonContent, filename, 'application/json');
   });
   container.appendChild(exportJSONBtn);
-    // ---- Anonyme Übermittlung an Google Sheets (Apps Script WebApp) ----
+
+  // ---- Anonyme Übermittlung an Google Sheets (Apps Script WebApp) ----
   const sendBtn = document.createElement('button');
   sendBtn.textContent = 'Ergebnisse anonym senden';
   sendBtn.style.marginLeft = '0.5rem';
@@ -670,7 +761,10 @@ function finishTest() {
 
     const payload = {
       timestamp: new Date().toISOString(),
-      results: state.answers
+      mode: PRO_MODE ? 'pro' : 'base',
+      selectedModules: state.selectedModules,
+      results: state.answers,
+      scorePercent,
     };
 
     try {
@@ -693,10 +787,36 @@ function finishTest() {
 
   container.appendChild(sendBtn);
 
+  // Profi-Modul Button / Zurück Button
+  const hasProQuestions = questions.some((q) => q.tier === 'pro');
+
+  if (!PRO_MODE && hasProQuestions) {
+    const proBtn = document.createElement('button');
+    proBtn.textContent = 'Profi-Modul starten (5 Fragen)';
+    proBtn.style.marginLeft = '0.5rem';
+    proBtn.addEventListener('click', () => {
+      // Basis-Session behalten, aber Profi neu starten
+      localStorage.removeItem('hydroQuizSession_pro');
+      window.location.search = '?pro=1';
+    });
+    container.appendChild(proBtn);
+  }
+
+  if (PRO_MODE) {
+    const backBtn = document.createElement('button');
+    backBtn.textContent = 'Zurück zum Basis-Test';
+    backBtn.style.marginLeft = '0.5rem';
+    backBtn.addEventListener('click', () => {
+      window.location.search = '';
+    });
+    container.appendChild(backBtn);
+  }
+
   // Anonymous feedback
   const feedbackTitle2 = document.createElement('h3');
   feedbackTitle2.textContent = 'Anonymes Feedback (optional)';
   container.appendChild(feedbackTitle2);
+
   const textarea = document.createElement('textarea');
   textarea.className = 'feedback-area';
   textarea.placeholder = 'Dein Feedback zum Test...';
@@ -704,10 +824,11 @@ function finishTest() {
 
   // Button to restart test
   const restartBtn = document.createElement('button');
-  restartBtn.textContent = 'Neu starten';
+  restartBtn.textContent = PRO_MODE ? 'Profi-Modul neu starten' : 'Neu starten';
   restartBtn.style.marginTop = '1rem';
   restartBtn.addEventListener('click', () => {
-    clearSession();
+    if (PRO_MODE) localStorage.removeItem('hydroQuizSession_pro');
+    else localStorage.removeItem('hydroQuizSession_base');
     renderLanding();
   });
   container.appendChild(restartBtn);
@@ -720,6 +841,7 @@ function buildCSV() {
   const header = [
     'questionId',
     'module',
+    'tier',
     'type',
     'selected',
     'correctAnswer',
@@ -731,16 +853,20 @@ function buildCSV() {
     'risk',
   ];
   const rows = [header.join(',')];
+
   state.answers.forEach((ans) => {
     const q = questions.find((q) => q.id === ans.questionId);
     const correctAns = (() => {
+      if (!q) return '';
       if (q.type === 'multi' || q.type === 'order') return JSON.stringify(q.answer);
       if (q.type === 'calc') return q.answer.value;
       return q.answer;
     })();
+
     rows.push([
       ans.questionId,
       ans.module,
+      ans.tier || (q && q.tier) || 'base',
       ans.type,
       JSON.stringify(ans.selected),
       correctAns,
@@ -752,8 +878,9 @@ function buildCSV() {
       JSON.stringify(ans.risk),
     ].join(','));
   });
+
   const csvContent = rows.join('\n');
-  const filename = 'hydro_quiz_results.csv';
+  const filename = PRO_MODE ? 'grow_quiz_results_pro.csv' : 'grow_quiz_results_base.csv';
   return { csvContent, filename };
 }
 
@@ -761,11 +888,12 @@ function buildCSV() {
 function buildJSON() {
   const data = {
     timestamp: new Date().toISOString(),
+    mode: PRO_MODE ? 'pro' : 'base',
     selectedModules: state.selectedModules,
     results: state.answers,
   };
   const jsonContent = JSON.stringify(data, null, 2);
-  const filename = 'hydro_quiz_results.json';
+  const filename = PRO_MODE ? 'grow_quiz_results_pro.json' : 'grow_quiz_results_base.json';
   return { jsonContent, filename };
 }
 
