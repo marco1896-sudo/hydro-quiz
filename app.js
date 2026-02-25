@@ -659,6 +659,39 @@ function finishTest() {
     downloadData(jsonContent, filename, 'application/json');
   });
   container.appendChild(exportJSONBtn);
+    // ---- Anonyme Übermittlung an Google Sheets (Apps Script WebApp) ----
+  const sendBtn = document.createElement('button');
+  sendBtn.textContent = 'Ergebnisse anonym senden';
+  sendBtn.style.marginLeft = '0.5rem';
+
+  sendBtn.addEventListener('click', async () => {
+    sendBtn.disabled = true;
+    sendBtn.textContent = 'Sende...';
+
+    const payload = {
+      timestamp: new Date().toISOString(),
+      results: state.answers
+    };
+
+    try {
+      await fetch('https://script.google.com/macros/s/AKfycbwMkx66jcixsdcUs0aFeB-r972Et23lzE-__r3YJWxb5jPiMYu_w6hoG5Ur8j-H-ck-qw/exec', {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      alert('Ergebnisse wurden anonym übermittelt. Danke!');
+    } catch (err) {
+      alert('Senden fehlgeschlagen. Bitte später erneut versuchen.');
+      console.error(err);
+    } finally {
+      sendBtn.disabled = false;
+      sendBtn.textContent = 'Ergebnisse anonym senden';
+    }
+  });
+
+  container.appendChild(sendBtn);
 
   // Anonymous feedback
   const feedbackTitle2 = document.createElement('h3');
