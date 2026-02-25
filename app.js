@@ -87,7 +87,7 @@ function renderLanding(resumableData = null) {
   intro.innerHTML = PRO_MODE
     ? 'Profi-Modul (5 Fragen): deutlich schwerer, Fokus auf Systemdenken, Antagonismen, Praxislogik und Entscheidungen.'
     : 'Anonymer Kompetenztest zu Nährstoffmanagement und Wechselwirkungen.<br><br> Wähle die Module aus, die du bearbeiten möchtest, oder starte den vollständigen Test.'+
-  'Mit deiner freiwilligen Teilnahme unterstützt du ein zukünftiges Community-Projekt.';
+  'Mit deiner freiwilligen Teilnahme und dem senden der auswertung unterstützt du ein zukünftiges Community-Projekt.';
   container.appendChild(intro);
 
   const modules = getUniqueModules();
