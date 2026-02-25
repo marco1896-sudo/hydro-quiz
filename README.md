@@ -4,7 +4,7 @@
 
 ## Übersicht
 
-Dieses Projekt liefert einen **voll funktionsfähigen, mobil optimierten Web‑Test** zur Ermittlung des Wissensstandes im Bereich Hydroponik und Bodenbewirtschaftung. Der Test ist modular aufgebaut, deckt grundlegende bis fortgeschrittene Themen ab und wertet die Antworten datenbasiert aus. Die Anwendung kommt ohne Server‑Back‑End aus und kann **kostenlos auf Cloudflare Pages oder GitHub Pages** gehostet werden.
+Dieses Projekt liefert einen **voll funktionsfähigen, mobil optimierten Web‑Test** zur Ermittlung des Wissensstandes im Bereich Hydroponik und Bodenbewirtschaftung. Der Test ist modular aufgebaut, deckt grundlegende bis fortgeschrittene Themen ab und wertet die Antworten datenbasiert aus.
 
 **Schlüsselmerkmale:**
 
@@ -15,58 +15,7 @@ Dieses Projekt liefert einen **voll funktionsfähigen, mobil optimierten Web‑T
 * Export der Ergebnisse als **CSV** oder **JSON**
 * Erweiterbar und wissenschaftlich fundiert (siehe Frage‑Begründungen in `questions.js`)
 
-## 1. Projektstruktur
 
-```text
-hydro‑quiz/
-├── index.html       # Einstiegspunkt, lädt UI und Skripte
-├── style.css        # Mobile‑first Styling
-├── app.js           # Logik für Test, Auswertung und Export
-├── questions.js     # Fragenkatalog mit Begründungen und Schwierigkeitslevel
-├── README.md        # Diese Dokumentation
-└── assets/          # Platz für zusätzliche Assets (Bilder, Logos)
-```
-
-### Architekturentscheidungen
-
-* **Plain HTML/CSS/JS:** Um kostenloses Hosting ohne Build‑Schritt zu ermöglichen, wurde bewusst auf Frameworks verzichtet. Alle Module werden per ES‑Modul (`import`) eingebunden und im Browser ausgeführt.
-* **LocalStorage:** Der aktuelle Fortschritt und die Antworten werden im Browser gespeichert. Dadurch wird keine Datenbank benötigt und der Test bleibt DSGVO‑sensibel.
-* **Modularität:** Fragen sind in `questions.js` kapselt. Neue Module oder Fragen können einfach durch Hinzufügen von Einträgen im Array erweitert werden.
-* **Drag‑and‑Drop Reihenfolgefragen:** Für „order“‑Fragen wird die native Drag‑and‑Drop‑API verwendet, um eine intuitive Sortierung ohne externe Bibliothek zu ermöglichen.
-
-## 2. Setup & Entwicklung
-
-1. **Repository klonen:**
-   ```bash
-   git clone <REPO_URL>
-   cd hydro‑quiz
-   ```
-2. **Lokales Testen:** Da viele Browser das Laden von ES‑Modulen über `file://` blockieren, empfiehlt sich der Start eines lokalen Servers:
-   ```bash
-   python3 -m http.server 8000 --directory .
-   ```
-   Anschließend im Browser `http://localhost:8000/index.html` aufrufen.
-3. **Anpassungen vornehmen:** Bearbeite `questions.js`, um Fragen zu ändern oder hinzuzufügen. In `app.js` kann die Bewertungslogik angepasst werden.
-
-## 3. Kostenloses Hosting
-
-### Option A: GitHub Pages
-
-1. Ein neues Repository auf GitHub erstellen und den Projektordner hochladen.
-2. In den Repository‑Einstellungen unter **Pages** als Quelle den Branch `main` (root) auswählen.
-3. Nach wenigen Minuten ist die Seite unter `https://<username>.github.io/<repository>/` erreichbar.
-4. Verlinkung: Der Test kann als Direktlink geteilt werden, z. B. `https://deinname.github.io/hydro‑quiz/`.
-
-### Option B: Cloudflare Pages
-
-1. Ein Konto bei [Cloudflare](https://pages.cloudflare.com/) erstellen.
-2. Neues Projekt erstellen und das GitHub‑Repo verbinden.
-3. Als Build Command **leer lassen** und das Output‑Verzeichnis auf `/` setzen.
-4. Nach Abschluss des Deployments ist die Seite über eine `.pages.dev`‑Domain erreichbar. Optional kann eine eigene Domain verbunden werden.
-
-### Teilnahme‑Link
-
-Der Teilnahme‑Link ist einfach die URL, unter der `index.html` bereitgestellt wird. Beispiel: `https://deinname.pages.dev` oder `https://deinname.github.io/hydro‑quiz/`. Der Test funktioniert ohne Query‑Parameter und erfordert kein Login.
 
 ## 4. Bedienung
 
@@ -98,29 +47,6 @@ Der Test orientiert sich an **kompetenzbasiertem Lernen**. Jede Frage ist mit ei
 * **Wechselwirkungen & Zusätze:** Nährstoff‑Antagonismen, Chelate, Silikate, Ausfällungen. Lernziel: chemische Zusammenhänge verstehen und Zusätze gezielt einsetzen.
 
 Die Schwierigkeitsklassifizierung (1–3) erlaubt eine mehrstufige Analyse: Ein hoher Anteil richtig beantworteter schwerer Fragen deutet auf tiefergehendes Verständnis hin.
-
-## 7. Erweiterung und Anpassung
-
-### Neue Fragen hinzufügen
-
-1. Öffne `questions.js`.
-2. Füge ein neues Objekt mit eindeutiger `id`, `module`, `type`, `text`, `options` (falls nötig), `answer`, `difficulty`, `categories`, `explanation` und optional `riskProfile` hinzu.
-3. Speichere die Datei. Beim nächsten Laden wird die neue Frage automatisch berücksichtigt.
-
-### Neue Module anlegen
-
-1. Wähle einen Modulnamen und verwende ihn für alle zugehörigen Fragen in `questions.js`.
-2. Die Modulauswahl auf der Startseite generiert die Optionen automatisch aus den vorhandenen Modulnamen.
-
-### Persistente Datenspeicherung
-
-Für MVP wird kein Server benötigt. Soll das System später für Forschung oder kommerzielle Zwecke genutzt werden, können Antworten über einen Serverless‑Endpunkt gespeichert werden (z. B. mittels [Cloudflare Workers](https://developers.cloudflare.com/workers/) oder [Supabase](https://supabase.com/)). Die Funktion `downloadData` in `app.js` kann angepasst werden, um die Ergebnisse per `fetch` zu senden.
-
-### Monetarisierung
-
-* **Freemium‑Modell:** Einige Module (z. B. Anfänger) kostenlos, fortgeschrittene Module kostenpflichtig. Implementiert durch eine Abfrage vor dem Start.
-* **Individuelle Auswertungen:** Erweiterte psychometrische Analysen und personalisierte Empfehlungen gegen Gebühr.
-* **Werbefreie Version:** Optional kostenpflichtiger Zugang ohne Logos oder mit Firmenbranding.
 
 ## 8. Wissenschaftliche Quellen
 
