@@ -77,12 +77,12 @@ function renderLanding(resumableData = null) {
   container.className = 'container';
 
   const title = document.createElement('h1');
-  title.textContent = 'Hydro‑Quiz – Kompetenztest';
+  title.textContent = 'Grow‑Quiz – Kompetenztest';
   container.appendChild(title);
 
   const intro = document.createElement('p');
   intro.innerHTML =
-    'Dieser Test bewertet dein Wissen über hydroponische Systeme, Nährstoffmanagement und Wechselwirkungen. Wähle die Module aus, die du bearbeiten möchtest, oder starte den vollständigen Test.';
+    'Dieser Test bewertet dein Grundwissen über Nährstoffmanagement und Wechselwirkungen. Wähle die Module aus, die du bearbeiten möchtest, oder starte den vollständigen Test.';
   container.appendChild(intro);
 
   // Module selection list
