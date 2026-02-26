@@ -128,7 +128,9 @@ function clearSession() {
 // Get unique modules from questions
 function getUniqueModules() {
   const set = new Set();
-  questions.forEach((q) => set.add(q.module));
+  questions
+    .filter((q) => (PRO_MODE ? q.tier === 'pro' : q.tier !== 'pro'))
+    .forEach((q) => set.add(q.module));
   return Array.from(set);
 }
 
@@ -153,8 +155,9 @@ function renderLanding(resumableData = null) {
   container.appendChild(title);
 
   const intro = document.createElement('p');
+  const proCount = questions.filter((q) => q.tier === 'pro').length;
   intro.innerHTML = PRO_MODE
-    ? 'Profi-Modul (5 Fragen): deutlich schwerer, Fokus auf Systemdenken, Antagonismen, Praxislogik und Entscheidungen.'
+    ? `Profi-Modul (${proCount} Fragen): deutlich schwerer, hydro-spezifisch und mit Fokus auf Systemdenken, Diagnose und Entscheidungen unter Dynamik.`
     : 'Anonymer Kompetenztest zu Nährstoffmanagement und Wechselwirkungen.<br><br> Wähle die Module aus, die du bearbeiten möchtest, oder starte den vollständigen Test.'+
   'Mit deiner freiwilligen Teilnahme und dem senden der auswertung unterstützt du ein zukünftiges Community-Projekt.';
   container.appendChild(intro);
@@ -1175,7 +1178,8 @@ function finishTest() {
 
   if (!PRO_MODE && hasProQuestions) {
     const proBtn = document.createElement('button');
-    proBtn.textContent = 'Profi-Modul starten (5 Fragen)';
+    const proCount = questions.filter((q) => q.tier === 'pro').length;
+    proBtn.textContent = `Profi-Modul starten (${proCount} Fragen)`;
     proBtn.style.marginLeft = '0.5rem';
     proBtn.addEventListener('click', () => {
       // Basis-Session behalten, aber Profi neu starten
