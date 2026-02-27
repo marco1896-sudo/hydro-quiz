@@ -116,7 +116,7 @@ p {
   margin: 10px 0 24px;
   padding: 12px 14px;
   border-radius: 12px;
-  border: 1px solid var(--color-border);
+  border: 1px solid #e2e8f0;
   background: #f1f5f9;
 }
 
@@ -132,6 +132,17 @@ p {
 .transparency-block li {
   margin: 3px 0;
   color: var(--color-muted);
+}
+
+:root[data-theme="dark"] .transparency-block {
+  background: #1e293b;
+  border: 1px solid #334155;
+  color: #e2e8f0;
+}
+
+:root[data-theme="dark"] .transparency-block li,
+:root[data-theme="dark"] .transparency-block h3 {
+  color: #e2e8f0;
 }
 
 button {
@@ -632,5 +643,16 @@ input[type='number'],
     --color-accent: #39d3ba;
     --color-option-bg: #1b2a39;
     --color-option-selected: #1d3a56;
+  }
+
+  :root:not([data-theme='light']) .transparency-block {
+    background: #1e293b;
+    border: 1px solid #334155;
+    color: #e2e8f0;
+  }
+
+  :root:not([data-theme='light']) .transparency-block li,
+  :root:not([data-theme='light']) .transparency-block h3 {
+    color: #e2e8f0;
   }
 }
