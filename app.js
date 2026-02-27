@@ -85,6 +85,37 @@ const SESSION_KEY = PRO_MODE ? 'growQuizSession_pro' : 'growQuizSession_base';
 // Select the root element where pages are rendered
 const appEl = document.getElementById('app');
 
+function initTheme() {
+  const storedTheme = localStorage.getItem('growQuizTheme');
+  const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+  const theme = storedTheme || (prefersDark ? 'dark' : 'light');
+  document.documentElement.dataset.theme = theme;
+}
+
+function ensureThemeToggle() {
+  if (document.getElementById('themeToggleBtn')) return;
+  const toggleBtn = document.createElement('button');
+  toggleBtn.id = 'themeToggleBtn';
+  toggleBtn.className = 'theme-toggle';
+
+  const syncLabel = () => {
+    const isDark = document.documentElement.dataset.theme === 'dark';
+    toggleBtn.textContent = isDark ? '☀️' : '🌙';
+    toggleBtn.setAttribute('aria-label', isDark ? 'Helles Design aktivieren' : 'Dunkles Design aktivieren');
+  };
+
+  syncLabel();
+  toggleBtn.addEventListener('click', () => {
+    const current = document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light';
+    const next = current === 'dark' ? 'light' : 'dark';
+    document.documentElement.dataset.theme = next;
+    localStorage.setItem('growQuizTheme', next);
+    syncLabel();
+  });
+
+  document.body.appendChild(toggleBtn);
+}
+
 // Global state for the current session
 let state = {
   selectedModules: [],
@@ -151,16 +182,46 @@ function renderLanding(resumableData = null) {
   container.className = 'container landing-screen';
 
   const title = document.createElement('h1');
-  title.textContent = PRO_MODE ? 'Grow-Quiz – Profi-Modul' : 'Grow-Quiz – Kompetenztest';
+  title.textContent = PRO_MODE ? 'Grow-Quiz – Profi-Modul' : 'Grow-Quiz – Praxischeck Nährstoffdynamik';
   container.appendChild(title);
 
-  const intro = document.createElement('p');
+  const subtitle = document.createElement('p');
+  subtitle.className = 'landing-subtitle';
+  subtitle.textContent = 'Ein anonymes Quiz mit typischen Situationen aus Erde und Hydro.';
+  container.appendChild(subtitle);
+
   const proCount = questions.filter((q) => q.tier === 'pro').length;
-  intro.innerHTML = PRO_MODE
-    ? `Profi-Modul (${proCount} Fragen): deutlich schwerer, hydro-spezifisch und mit Fokus auf Systemdenken, Diagnose und Entscheidungen unter Dynamik.`
-    : 'Anonymer Kompetenztest zu Nährstoffmanagement und Wechselwirkungen.<br><br> Wähle die Module aus, die du bearbeiten möchtest, oder starte den vollständigen Test.'+
-  'Mit deiner freiwilligen Teilnahme und dem senden der auswertung unterstützt du ein zukünftiges Community-Projekt.';
-  container.appendChild(intro);
+  if (PRO_MODE) {
+    const introPro = document.createElement('p');
+    introPro.textContent = `Profi-Modul (${proCount} Fragen): deutlich schwerer, hydro-spezifisch und mit Fokus auf Systemdenken, Diagnose und Entscheidungen unter Dynamik.`;
+    container.appendChild(introPro);
+  } else {
+    const intro1 = document.createElement('p');
+    intro1.textContent = 'Viele Nährstoffprobleme entstehen nicht nur durch „zu wenig“ oder „zu viel“, sondern durch falsche Einschätzung.';
+    container.appendChild(intro1);
+
+    const intro2 = document.createElement('p');
+    intro2.textContent = 'In diesem Quiz spielst du praxisnahe Szenarien durch. Ziel ist einfach, ein ehrliches Bild zu bekommen, wo noch Unsicherheiten oder typische Denkfehler liegen.';
+    container.appendChild(intro2);
+
+    const intro3 = document.createElement('p');
+    intro3.textContent = 'Du kannst einzelne Module wählen oder alles durchlaufen.';
+    container.appendChild(intro3);
+
+    const transparency = document.createElement('div');
+    transparency.className = 'transparency-block';
+    const transparencyTitle = document.createElement('h3');
+    transparencyTitle.textContent = 'Transparenz';
+    transparency.appendChild(transparencyTitle);
+    const transparencyList = document.createElement('ul');
+    ['Keine Anmeldung', 'Keine persönlichen Daten', 'Alles bleibt auf deinem Gerät', 'Auswertung senden ist freiwillig'].forEach((point) => {
+      const li = document.createElement('li');
+      li.textContent = point;
+      transparencyList.appendChild(li);
+    });
+    transparency.appendChild(transparencyList);
+    container.appendChild(transparency);
+  }
 
   const modules = getUniqueModules();
 
@@ -261,7 +322,7 @@ function renderLanding(resumableData = null) {
   // Start button
   const startBtn = document.createElement('button');
   startBtn.classList.add('btn-primary');
-  startBtn.textContent = 'Test starten';
+  startBtn.textContent = 'Praxischeck starten';
   startBtn.addEventListener('click', () => {
     const selected = [];
     const checks = list.querySelectorAll('input[type="checkbox"]');
@@ -358,8 +419,11 @@ function renderQuestion() {
   }
   const q = state.currentQuestions[state.currentIndex];
   appEl.innerHTML = '';
+  const shell = document.createElement('div');
+  shell.className = 'quiz-shell';
+
   const container = document.createElement('div');
-  container.className = 'container question-screen';
+  container.className = 'container question-screen quiz-content';
 
   // Progress indicator
   const progressContainer = document.createElement('div');
@@ -607,6 +671,9 @@ function renderQuestion() {
   container.appendChild(confidenceDiv);
 
   // Submit button
+  const actionBar = document.createElement('div');
+  actionBar.className = 'action-bar';
+
   const submitBtn = document.createElement('button');
   submitBtn.classList.add('btn-primary');
   submitBtn.textContent = 'Antwort absenden';
@@ -747,8 +814,10 @@ function renderQuestion() {
     }
   });
 
-  container.appendChild(submitBtn);
-  appEl.appendChild(container);
+  actionBar.appendChild(submitBtn);
+  shell.appendChild(container);
+  shell.appendChild(actionBar);
+  appEl.appendChild(shell);
 }
 
 function renderDecision() {
@@ -825,8 +894,11 @@ function finishTest() {
   saveSession();
 
   appEl.innerHTML = '';
+  const shell = document.createElement('div');
+  shell.className = 'results-shell';
+
   const container = document.createElement('div');
-  container.className = 'container results-screen';
+  container.className = 'container results-screen results-content';
 
   const h2 = document.createElement('h2');
   h2.textContent = PRO_MODE ? 'Ergebnisse (Profi-Modul)' : 'Ergebnisse';
@@ -866,6 +938,16 @@ function finishTest() {
   summaryP.innerHTML = `Du hast insgesamt <strong>${totalScorePoints.toFixed(2)}</strong> von <strong>${totalQuestions}</strong> möglichen Punkten erzielt (Gesamtscore: <strong>${scorePercent}%</strong>). Vollständig richtig: <strong>${fullCorrectCount}</strong>, Teilwissen: <strong>${partialCount}</strong>, falsch: <strong>${wrongCount}</strong>, "Weiß nicht": <strong>${dontKnowCount}</strong>. Kompetenzstufe: <strong>${competence}</strong>.`;
   container.appendChild(summaryP);
 
+  const sendCallout = document.createElement('div');
+  sendCallout.className = 'send-callout';
+  const sendCalloutTitle = document.createElement('h3');
+  sendCalloutTitle.textContent = 'Hinweis';
+  const sendCalloutText = document.createElement('p');
+  sendCalloutText.textContent = 'Die Übermittlung ist freiwillig und anonym.';
+  sendCallout.appendChild(sendCalloutTitle);
+  sendCallout.appendChild(sendCalloutText);
+  container.appendChild(sendCallout);
+
   // Modul-Statistiken nach Teilpunkten
   const modules = getUniqueModules();
   const subscores = {};
@@ -896,6 +978,7 @@ function finishTest() {
   ['Modul', 'Punkte', 'Fragen', 'Prozent', 'Richtig', 'Teilwissen', 'Falsch', 'Weiß nicht'].forEach((h) => {
     const th = document.createElement('th');
     th.textContent = h;
+    th.dataset.label = h;
     tr.appendChild(th);
   });
   subTable.appendChild(tr);
@@ -917,6 +1000,14 @@ function finishTest() {
     tdWrong.textContent = data.wrong;
     const tdUnknown = document.createElement('td');
     tdUnknown.textContent = data.unknown;
+    tdName.dataset.label = 'Modul';
+    tdScore.dataset.label = 'Punkte';
+    tdTotal.dataset.label = 'Fragen';
+    tdPercent.dataset.label = 'Prozent';
+    tdFull.dataset.label = 'Richtig';
+    tdPart.dataset.label = 'Teilwissen';
+    tdWrong.dataset.label = 'Falsch';
+    tdUnknown.dataset.label = 'Weiß nicht';
     tr.appendChild(tdName);
     tr.appendChild(tdScore);
     tr.appendChild(tdTotal);
@@ -968,6 +1059,7 @@ function finishTest() {
     ['Kategorie', 'Punkte%', 'Richtig', 'Teilwissen', 'Falsch', 'Weiß nicht', '∅ Vertrauen'].forEach((h) => {
       const th = document.createElement('th');
       th.textContent = h;
+      th.dataset.label = h;
       trc.appendChild(th);
     });
     catTable.appendChild(trc);
@@ -985,6 +1077,13 @@ function finishTest() {
       const tdConf = document.createElement('td');
       const avgConf = data.total > 0 ? (data.confidenceSum / data.total).toFixed(2) : '–';
       tdConf.textContent = avgConf;
+      tdCat.dataset.label = 'Kategorie';
+      tdPercent.dataset.label = 'Punkte%';
+      tdC.dataset.label = 'Richtig';
+      tdP.dataset.label = 'Teilwissen';
+      tdW.dataset.label = 'Falsch';
+      tdU.dataset.label = 'Weiß nicht';
+      tdConf.dataset.label = '∅ Vertrauen';
       trRow.appendChild(tdCat);
       trRow.appendChild(tdPercent);
       trRow.appendChild(tdC);
@@ -1155,7 +1254,7 @@ function finishTest() {
   methodTitle.textContent = 'Methodik & Datenschutz';
   container.appendChild(methodTitle);
   const methodP = document.createElement('p');
-  methodP.innerHTML = 'Die Auswertung berücksichtigt Teilpunkte und das Selbstvertrauen, um dein Wissensprofil differenziert abzubilden. "Weiß nicht"‑Angaben werden separat erfasst. Alle Antworten bleiben lokal gespeichert, es sei denn, du entscheidest dich, die anonymisierten Daten zu senden. Es werden keine persönlichen Daten übertragen.';
+  methodP.innerHTML = 'Die Auswertung berücksichtigt richtige und teilweise richtige Antworten sowie deine eigene Einschätzung.<br>"Weiß nicht"-Antworten werden separat erfasst.<br>Alle Antworten bleiben auf deinem Gerät, außer du entscheidest dich am Ende freiwillig, die anonymisierte Auswertung zu senden.<br>Es werden keine persönlichen Daten übertragen.';
   container.appendChild(methodP);
 
   // Hinweis zur Bedeutung der Rückmeldung
@@ -1166,10 +1265,9 @@ function finishTest() {
   const importantList = document.createElement('ul');
   importantList.className = 'send-info-list';
   const importantItems = [
-    'Fragenqualität zu verbessern',
-    'typische Fehlkonzepte zu erkennen',
-    'Schwierigkeitsgrade valide einzustufen',
-    'das System wissenschaftlich weiterzuentwickeln'
+    'Fragen verständlicher machen',
+    'typische Denkfehler erkennen',
+    'Schwierigkeitsgrad besser einschätzen'
   ];
   importantItems.forEach((text) => {
     const li = document.createElement('li');
@@ -1208,8 +1306,8 @@ function finishTest() {
   // ---- Anonyme Übermittlung an Google Sheets (Apps Script WebApp) ----
   const sendBtn = document.createElement('button');
   sendBtn.classList.add('btn-primary');
-  // Button zum anonymen Übermitteln mit Hinweis auf die Weiterentwicklung
-  sendBtn.textContent = 'Ergebnisse anonym senden (unterstützt Weiterentwicklung)';
+  // Button zum anonymen Übermitteln
+  sendBtn.textContent = 'Anonyme Auswertung senden';
   sendBtn.style.marginLeft = '0.5rem';
 
   sendBtn.addEventListener('click', async () => {
@@ -1271,11 +1369,13 @@ function finishTest() {
       console.error(err);
     } finally {
       sendBtn.disabled = false;
-      sendBtn.textContent = 'Ergebnisse anonym senden (unterstützt Weiterentwicklung)';
+      sendBtn.textContent = 'Anonyme Auswertung senden';
     }
   });
 
-  container.appendChild(sendBtn);
+  const resultsActionBar = document.createElement('div');
+  resultsActionBar.className = 'results-action-bar';
+  resultsActionBar.appendChild(sendBtn);
 
   // Profi-Modul Button / Zurück Button
   const hasProQuestions = questions.some((q) => q.tier === 'pro');
@@ -1327,7 +1427,9 @@ function finishTest() {
   });
   container.appendChild(restartBtn);
 
-  appEl.appendChild(container);
+  shell.appendChild(container);
+  shell.appendChild(resultsActionBar);
+  appEl.appendChild(shell);
 }
 
 // Build CSV export string
@@ -1418,6 +1520,9 @@ function downloadData(content, filename, mimeType) {
 
 // On page load: check for existing session and render accordingly
 window.addEventListener('DOMContentLoaded', () => {
+  initTheme();
+  ensureThemeToggle();
+
   const saved = loadSession();
   if (saved && !saved.finished) {
     renderLanding(saved);
