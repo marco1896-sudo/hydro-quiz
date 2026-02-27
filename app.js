@@ -148,7 +148,7 @@ function shuffle(array) {
 function renderLanding(resumableData = null) {
   appEl.innerHTML = '';
   const container = document.createElement('div');
-  container.className = 'container';
+  container.className = 'container landing-screen';
 
   const title = document.createElement('h1');
   title.textContent = PRO_MODE ? 'Grow-Quiz – Profi-Modul' : 'Grow-Quiz – Kompetenztest';
@@ -359,17 +359,20 @@ function renderQuestion() {
   const q = state.currentQuestions[state.currentIndex];
   appEl.innerHTML = '';
   const container = document.createElement('div');
-  container.className = 'container';
+  container.className = 'container question-screen';
 
   // Progress indicator
   const progressContainer = document.createElement('div');
   progressContainer.className = 'progress-container';
+  const progressTrack = document.createElement('div');
+  progressTrack.className = 'progress-track';
   const progressBar = document.createElement('div');
   progressBar.className = 'progress-bar';
   const displayIndex = state.currentIndex + 1;
   const percent = (displayIndex / state.currentQuestions.length) * 100;
   progressBar.style.width = `${percent}%`;
-  progressContainer.appendChild(progressBar);
+  progressTrack.appendChild(progressBar);
+  progressContainer.appendChild(progressTrack);
 
   const progressText = document.createElement('p');
   progressText.className = 'progress-text';
@@ -398,6 +401,7 @@ function renderQuestion() {
 
   // Options container
   const optionsContainer = document.createElement('div');
+  optionsContainer.className = 'options-container';
 
   if (q.type === 'single' || q.type === 'scenario') {
     // radio buttons with "Weiß nicht" Option
@@ -578,6 +582,7 @@ function renderQuestion() {
 
   // Confidence rating slider (initially ausgeblendet, wird nach Auswahl sichtbar)
   const confidenceDiv = document.createElement('div');
+  confidenceDiv.className = 'confidence-panel';
   confidenceDiv.style.marginTop = '1rem';
   confidenceDiv.style.display = 'none';
   const confLabel = document.createElement('label');
@@ -750,18 +755,20 @@ function renderDecision() {
   appEl.innerHTML = '';
 
   const container = document.createElement('div');
-  container.className = 'container';
+  container.className = 'container decision-screen';
 
   const title = document.createElement('h2');
+  title.className = 'decision-title';
   title.textContent = 'Wie möchtest du fortfahren?';
   container.appendChild(title);
 
   const text = document.createElement('p');
+  text.className = 'decision-subtext';
   text.textContent = 'Das Hydro / Profi-Modul ist optional, deutlich anspruchsvoller und stärker hydro-spezifisch. Deine Teilnahme hilft, die Auswertung und Fragenqualität weiterzuentwickeln.';
   container.appendChild(text);
 
-  const actions = document.createElement('div');
-  actions.className = 'button-row';
+  const primaryAction = document.createElement('div');
+  primaryAction.className = 'decision-primary-action';
 
   const proBtn = document.createElement('button');
   proBtn.classList.add('btn-primary');
@@ -769,7 +776,11 @@ function renderDecision() {
   proBtn.addEventListener('click', () => {
     window.location.search = '?pro=1';
   });
-  actions.appendChild(proBtn);
+  primaryAction.appendChild(proBtn);
+  container.appendChild(primaryAction);
+
+  const actions = document.createElement('div');
+  actions.className = 'button-row decision-secondary-actions';
 
   const evalBtn = document.createElement('button');
   evalBtn.classList.add('btn-secondary');
@@ -815,7 +826,7 @@ function finishTest() {
 
   appEl.innerHTML = '';
   const container = document.createElement('div');
-  container.className = 'container';
+  container.className = 'container results-screen';
 
   const h2 = document.createElement('h2');
   h2.textContent = PRO_MODE ? 'Ergebnisse (Profi-Modul)' : 'Ergebnisse';
@@ -837,6 +848,18 @@ function finishTest() {
   else if (scorePercent < 50) competence = 'Stufe 2';
   else if (scorePercent < 75) competence = 'Stufe 3';
   else competence = 'Stufe 4';
+
+  const scoreHero = document.createElement('div');
+  scoreHero.className = 'score-hero';
+  const scorePercentEl = document.createElement('div');
+  scorePercentEl.className = 'score-percent';
+  scorePercentEl.textContent = `${scorePercent}%`;
+  const scorePointsEl = document.createElement('div');
+  scorePointsEl.className = 'score-points';
+  scorePointsEl.textContent = `${totalScorePoints.toFixed(2)} / ${totalQuestions} Punkte`;
+  scoreHero.appendChild(scorePercentEl);
+  scoreHero.appendChild(scorePointsEl);
+  container.appendChild(scoreHero);
 
   // Text summary mit Teilpunkten und Counts
   const summaryP = document.createElement('p');
@@ -972,6 +995,22 @@ function finishTest() {
       catTable.appendChild(trRow);
     });
     container.appendChild(catTable);
+
+    const categoryCardGrid = document.createElement('div');
+    categoryCardGrid.className = 'category-card-grid';
+    Object.entries(categoryStats).forEach(([cat, data]) => {
+      const card = document.createElement('div');
+      card.className = 'category-card';
+      const catName = document.createElement('h4');
+      catName.textContent = cat;
+      const catPercent = document.createElement('p');
+      const catScore = data.total > 0 ? Math.round((data.scoreSum / data.total) * 100) : 0;
+      catPercent.textContent = `Leistung: ${catScore}%`;
+      card.appendChild(catName);
+      card.appendChild(catPercent);
+      categoryCardGrid.appendChild(card);
+    });
+    container.appendChild(categoryCardGrid);
   }
 
   // Persönliches Feedback auf Basis der Modul- und Kategorienleistung
