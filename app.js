@@ -122,6 +122,8 @@ let state = {
   currentQuestions: [],
   currentIndex: 0,
   answers: [],
+  combinedQuestions: [],
+  combinedAnswers: [],
   startTime: null,
   finished: false,
 };
@@ -148,6 +150,61 @@ function loadSession() {
   } catch (err) {
     return null;
   }
+}
+
+function loadSessionByKey(key) {
+  const data = localStorage.getItem(key);
+  if (!data) return null;
+  try {
+    return JSON.parse(data);
+  } catch (err) {
+    return null;
+  }
+}
+
+function buildCombinedDataset() {
+  if (!PRO_MODE) {
+    return {
+      questionsData: state.currentQuestions.slice(),
+      answersData: state.answers.slice(),
+      hasCombinedBaseAndPro: false,
+    };
+  }
+
+  const baseSession = loadSessionByKey('growQuizSession_base');
+  const baseQuestionIds = (baseSession && Array.isArray(baseSession.currentQuestions))
+    ? baseSession.currentQuestions
+    : [];
+  const baseQuestions = baseQuestionIds
+    .map((id) => questions.find((q) => q.id === id))
+    .filter(Boolean);
+  const baseAnswers = (baseSession && Array.isArray(baseSession.answers))
+    ? baseSession.answers
+    : [];
+
+  const mergedQuestions = [];
+  const seenQuestionIds = new Set();
+  [...baseQuestions, ...state.currentQuestions].forEach((q) => {
+    if (!q || seenQuestionIds.has(q.id)) return;
+    seenQuestionIds.add(q.id);
+    mergedQuestions.push(q);
+  });
+
+  const mergedAnswers = [];
+  const seenAnswerKeys = new Set();
+  [...baseAnswers, ...state.answers].forEach((ans) => {
+    if (!ans) return;
+    const key = `${ans.questionId}::${ans.module}::${ans.tier || ''}`;
+    if (seenAnswerKeys.has(key)) return;
+    seenAnswerKeys.add(key);
+    mergedAnswers.push(ans);
+  });
+
+  return {
+    questionsData: mergedQuestions,
+    answersData: mergedAnswers,
+    hasCombinedBaseAndPro: baseAnswers.length > 0 && state.answers.length > 0,
+  };
 }
 
 // Helper: Clear sessions from localStorage (both base and pro)
@@ -381,6 +438,8 @@ function startTest() {
   state.currentQuestions = shuffle(state.currentQuestions);
   state.currentIndex = 0;
   state.answers = [];
+  state.combinedQuestions = [];
+  state.combinedAnswers = [];
   state.finished = false;
   state.startTime = Date.now();
   saveSession();
@@ -398,6 +457,8 @@ function resumeSession(data) {
 
   state.currentIndex = data.currentIndex;
   state.answers = data.answers || [];
+  state.combinedQuestions = [];
+  state.combinedAnswers = [];
   state.startTime = data.startTime;
   state.finished = data.finished;
 
@@ -660,27 +721,42 @@ function renderQuestion() {
 
   // Confidence rating slider (initially ausgeblendet, wird nach Auswahl sichtbar)
   const confidenceDiv = document.createElement('div');
-  confidenceDiv.className = 'confidence-panel';
+  confidenceDiv.className = 'confidence-panel confidence-card';
   confidenceDiv.style.marginTop = '1rem';
   confidenceDiv.style.display = 'none';
   const confLabel = document.createElement('label');
+  confLabel.className = 'confidence-label';
   confLabel.textContent = 'Wie sicher bist du dir? (1 = unsicher, 5 = sehr sicher)';
   confLabel.style.display = 'block';
+  const confHint = document.createElement('p');
+  confHint.className = 'confidence-hint';
+  confHint.textContent = 'Bewerte kurz dein Gefühl zur Antwort, bevor du absendest.';
   const confInput = document.createElement('input');
+  confInput.className = 'confidence-range';
   confInput.type = 'range';
   confInput.min = '1';
   confInput.max = '5';
   confInput.value = '3';
   confInput.step = '1';
   confInput.style.width = '100%';
+  confInput.style.setProperty('--range-percent', '50%');
+  const confScale = document.createElement('div');
+  confScale.className = 'confidence-scale';
+  confScale.innerHTML = '<span>1</span><span>2</span><span>3</span><span>4</span><span>5</span>';
   const confValueSpan = document.createElement('span');
+  confValueSpan.className = 'confidence-value';
   confValueSpan.style.marginLeft = '0.5rem';
   confValueSpan.textContent = confInput.value;
   confInput.addEventListener('input', () => {
     confValueSpan.textContent = confInput.value;
+    const progress = ((Number(confInput.value) - Number(confInput.min)) /
+      (Number(confInput.max) - Number(confInput.min))) * 100;
+    confInput.style.setProperty('--range-percent', `${progress}%`);
   });
   confidenceDiv.appendChild(confLabel);
+  confidenceDiv.appendChild(confHint);
   confidenceDiv.appendChild(confInput);
+  confidenceDiv.appendChild(confScale);
   confidenceDiv.appendChild(confValueSpan);
   container.appendChild(confidenceDiv);
 
@@ -925,18 +1001,25 @@ function finishTest() {
   container.className = 'container results-screen results-content';
 
   const h2 = document.createElement('h2');
-  h2.textContent = PRO_MODE ? 'Ergebnisse (Profi-Modul)' : 'Ergebnisse';
+
+  const { questionsData, answersData, hasCombinedBaseAndPro } = buildCombinedDataset();
+  state.combinedQuestions = questionsData.slice();
+  state.combinedAnswers = answersData.slice();
+  state.currentQuestions = questionsData.slice();
+  state.answers = answersData.slice();
+
+  h2.textContent = hasCombinedBaseAndPro ? 'Ergebnisse' : (PRO_MODE ? 'Ergebnisse (Profi-Modul)' : 'Ergebnisse');
   container.appendChild(h2);
 
-  const totalQuestions = state.currentQuestions.length;
+  const totalQuestions = questionsData.length;
   // Gesamte Punktzahl (Teilpunkte) summieren
-  const totalScorePoints = state.answers.reduce((sum, a) => sum + a.scoreEarned, 0);
+  const totalScorePoints = answersData.reduce((sum, a) => sum + a.scoreEarned, 0);
   const scorePercent = totalQuestions > 0 ? Math.round((totalScorePoints / totalQuestions) * 100) : 0;
   // Zählungen nach Typ
-  const fullCorrectCount = state.answers.filter((a) => a.scoreEarned === 1 && !a.dontKnow).length;
-  const partialCount = state.answers.filter((a) => a.scoreEarned > 0 && a.scoreEarned < 1).length;
-  const dontKnowCount = state.answers.filter((a) => a.dontKnow).length;
-  const wrongCount = state.answers.filter((a) => !a.dontKnow && a.scoreEarned === 0).length;
+  const fullCorrectCount = answersData.filter((a) => a.scoreEarned === 1 && !a.dontKnow).length;
+  const partialCount = answersData.filter((a) => a.scoreEarned > 0 && a.scoreEarned < 1).length;
+  const dontKnowCount = answersData.filter((a) => a.dontKnow).length;
+  const wrongCount = answersData.filter((a) => !a.dontKnow && a.scoreEarned === 0).length;
 
   // Neutrale Kompetenzstufen
   let competence;
@@ -973,12 +1056,12 @@ function finishTest() {
   container.appendChild(sendCallout);
 
   // Modul-Statistiken nach Teilpunkten
-  const modules = getUniqueModules();
+  const modules = Array.from(new Set(questionsData.map((q) => q.module)));
   const subscores = {};
   modules.forEach((mod) => {
-    const modQuestions = state.currentQuestions.filter((q) => q.module === mod);
+    const modQuestions = questionsData.filter((q) => q.module === mod);
     if (modQuestions.length === 0) return;
-    const modAns = state.answers.filter((a) => a.module === mod);
+    const modAns = answersData.filter((a) => a.module === mod);
     const modScore = modAns.reduce((sum, a) => sum + a.scoreEarned, 0);
     const modPercent = Math.round((modScore / modQuestions.length) * 100);
     const modFull = modAns.filter((a) => a.scoreEarned === 1 && !a.dontKnow).length;
@@ -1046,9 +1129,9 @@ function finishTest() {
 
   // Kategorienstatistik: berechnet pro Kategorie Gesamtanzahl, Punkte, richtig/teilweise/falsch/weiß nicht und Durchschnittsvertrauen
   const categoryStats = {};
-  state.answers.forEach((ans) => {
+  answersData.forEach((ans) => {
     // Finde Kategorien des jeweiligen Frageobjekts
-    const q = state.currentQuestions.find((qu) => qu.id === ans.questionId);
+    const q = questionsData.find((qu) => qu.id === ans.questionId);
     const cats = (q && q.categories) || [];
     cats.forEach((cat) => {
       if (!categoryStats[cat]) {
@@ -1176,14 +1259,14 @@ function finishTest() {
   container.appendChild(feedbackList);
 
   // Time stats
-  const totalTime = state.answers.reduce((sum, a) => sum + a.timeSpent, 0);
+  const totalTime = answersData.reduce((sum, a) => sum + a.timeSpent, 0);
   const timeTitle = document.createElement('h3');
   timeTitle.textContent = 'Zeitstatistik';
   container.appendChild(timeTitle);
 
   const timeList = document.createElement('ul');
   modules.forEach((mod) => {
-    const modTime = state.answers
+    const modTime = answersData
       .filter((a) => a.module === mod)
       .reduce((sum, a) => sum + a.timeSpent, 0);
     if (modTime > 0) {
@@ -1203,14 +1286,14 @@ function finishTest() {
   container.appendChild(analysisTitle);
   const analysisList = document.createElement('ul');
   // Durchschnittlicher Schwierigkeitsgrad für vollständig richtige und alle anderen Antworten
-  const correctDifficulty = state.answers
+  const correctDifficulty = answersData
     .filter((a) => a.scoreEarned === 1 && !a.dontKnow)
     .reduce((sum, a) => sum + a.difficulty, 0);
-  const incorrectDifficulty = state.answers
+  const incorrectDifficulty = answersData
     .filter((a) => a.scoreEarned === 0 && !a.dontKnow)
     .reduce((sum, a) => sum + a.difficulty, 0);
-  const numCorrectFull = state.answers.filter((a) => a.scoreEarned === 1 && !a.dontKnow).length;
-  const numWrong = state.answers.filter((a) => a.scoreEarned === 0 && !a.dontKnow).length;
+  const numCorrectFull = answersData.filter((a) => a.scoreEarned === 1 && !a.dontKnow).length;
+  const numWrong = answersData.filter((a) => a.scoreEarned === 0 && !a.dontKnow).length;
   const avgCorrectDiff = numCorrectFull > 0 ? (correctDifficulty / numCorrectFull).toFixed(2) : '–';
   const avgWrongDiff = numWrong > 0 ? (incorrectDifficulty / numWrong).toFixed(2) : '–';
   const liDiff = document.createElement('li');
@@ -1218,7 +1301,7 @@ function finishTest() {
   analysisList.appendChild(liDiff);
   // Vertrauensmetriken
   const confStats = { full: { sum: 0, count: 0 }, partial: { sum: 0, count: 0 }, wrong: { sum: 0, count: 0 }, unknown: { sum: 0, count: 0 } };
-  state.answers.forEach((ans) => {
+  answersData.forEach((ans) => {
     if (ans.dontKnow) {
       confStats.unknown.sum += ans.confidence;
       confStats.unknown.count++;
@@ -1476,7 +1559,9 @@ function buildCSV() {
   ];
   const rows = [header.join(',')];
 
-  state.answers.forEach((ans) => {
+  const exportAnswers = state.combinedAnswers.length ? state.combinedAnswers : state.answers;
+
+  exportAnswers.forEach((ans) => {
     const q = questions.find((q) => q.id === ans.questionId);
     const correctAns = (() => {
       if (!q) return '';
@@ -1511,15 +1596,17 @@ function buildCSV() {
 // Build JSON export string
 function buildJSON() {
   // JSON enthält zusätzlich Gesamtscore und Prozentwerte
-  const totalQuestions = state.currentQuestions.length;
-  const totalScorePoints = state.answers.reduce((sum, a) => sum + a.scoreEarned, 0);
+  const jsonQuestions = state.combinedQuestions.length ? state.combinedQuestions : state.currentQuestions;
+  const jsonAnswers = state.combinedAnswers.length ? state.combinedAnswers : state.answers;
+  const totalQuestions = jsonQuestions.length;
+  const totalScorePoints = jsonAnswers.reduce((sum, a) => sum + a.scoreEarned, 0);
   const scorePercent = totalQuestions > 0 ? Math.round((totalScorePoints / totalQuestions) * 100) : 0;
   const competence = scorePercent < 25 ? 'Stufe 1' : scorePercent < 50 ? 'Stufe 2' : scorePercent < 75 ? 'Stufe 3' : 'Stufe 4';
   const data = {
     timestamp: new Date().toISOString(),
     mode: PRO_MODE ? 'pro' : 'base',
     selectedModules: state.selectedModules,
-    results: state.answers,
+    results: jsonAnswers,
     totalScorePoints,
     scorePercent,
     competence,
