@@ -177,6 +177,7 @@ function shuffle(array) {
 
 // Render landing / module selection page
 function renderLanding(resumableData = null) {
+  ensureThemeToggle();
   appEl.innerHTML = '';
   const container = document.createElement('div');
   container.className = 'container landing-screen';
@@ -425,6 +426,8 @@ function renderQuestion() {
   const container = document.createElement('div');
   container.className = 'container question-screen quiz-content';
 
+  ensureThemeToggle();
+
   // Progress indicator
   const progressContainer = document.createElement('div');
   progressContainer.className = 'progress-container';
@@ -442,7 +445,18 @@ function renderQuestion() {
   progressText.className = 'progress-text';
   progressText.textContent = `Frage ${displayIndex} von ${state.currentQuestions.length} • ${Math.round(percent)} %`;
   progressContainer.appendChild(progressText);
-  container.appendChild(progressContainer);
+  const questionTopbar = document.createElement('div');
+  questionTopbar.className = 'question-topbar';
+  questionTopbar.appendChild(progressContainer);
+
+  const themeSlot = document.createElement('div');
+  themeSlot.className = 'theme-toggle-slot';
+  const themeToggleBtn = document.getElementById('themeToggleBtn');
+  if (themeToggleBtn) {
+    themeSlot.appendChild(themeToggleBtn);
+  }
+  questionTopbar.appendChild(themeSlot);
+  container.appendChild(questionTopbar);
 
   // Question header
   const header = document.createElement('div');
@@ -822,9 +836,18 @@ function renderQuestion() {
 
 function renderDecision() {
   appEl.innerHTML = '';
+  ensureThemeToggle();
 
   const container = document.createElement('div');
   container.className = 'container decision-screen';
+
+  const decisionTopbar = document.createElement('div');
+  decisionTopbar.className = 'decision-topbar';
+  const themeToggleBtn = document.getElementById('themeToggleBtn');
+  if (themeToggleBtn) {
+    decisionTopbar.appendChild(themeToggleBtn);
+  }
+  container.appendChild(decisionTopbar);
 
   const title = document.createElement('h2');
   title.className = 'decision-title';
@@ -849,10 +872,10 @@ function renderDecision() {
   container.appendChild(primaryAction);
 
   const actions = document.createElement('div');
-  actions.className = 'button-row decision-secondary-actions';
+  actions.className = 'decision-actions';
 
   const evalBtn = document.createElement('button');
-  evalBtn.classList.add('btn-secondary');
+  evalBtn.classList.add('btn-secondary', 'decision-btn', 'decision-btn--secondary');
   evalBtn.textContent = 'Zur Auswertung';
   evalBtn.addEventListener('click', () => {
     finishTest();
@@ -860,7 +883,7 @@ function renderDecision() {
   actions.appendChild(evalBtn);
 
   const skipBtn = document.createElement('button');
-  skipBtn.classList.add('btn-tertiary');
+  skipBtn.classList.add('btn-tertiary', 'decision-btn', 'decision-btn--tertiary');
   skipBtn.textContent = 'Überspringen';
   skipBtn.addEventListener('click', () => {
     finishTest();
@@ -890,6 +913,7 @@ function getDragAfterElement(container, y) {
 
 // Finish test: compute results and render summary
 function finishTest() {
+  ensureThemeToggle();
   state.finished = true;
   saveSession();
 

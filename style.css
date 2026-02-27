@@ -13,6 +13,7 @@
   --color-option-selected: #e8efff;
   --radius-md: 14px;
   --page-gradient: #f8fafc;
+  --actionbar-h: 72px;
 }
 
 :root[data-theme="dark"] {
@@ -270,23 +271,33 @@ button:disabled {
 .options li {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
   min-height: 54px;
+  opacity: 1;
 }
 
 .options li:hover,
 .sortable-list li:hover {
-  background: #f1f5f9;
+  background: color-mix(in srgb, var(--color-option-bg) 82%, var(--color-surface));
 }
 
 .options li:has(input:checked) {
-  border: 2px solid var(--color-primary);
+  border: 1px solid var(--color-primary);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-primary) 22%, transparent);
   background: var(--color-option-selected);
+}
+
+.options label {
+  flex: 1;
+  color: var(--color-text);
+  opacity: 1;
+  line-height: 1.45;
 }
 
 .options input {
   inline-size: 20px;
   block-size: 20px;
+  flex: 0 0 20px;
   accent-color: var(--color-primary);
 }
 
@@ -335,8 +346,31 @@ input[type='number'],
   align-items: stretch;
 }
 
+.question-topbar {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.question-topbar .progress-container {
+  flex: 1;
+  margin-bottom: 0;
+}
+
+.theme-toggle-slot,
+.decision-topbar {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.decision-topbar {
+  margin-bottom: 10px;
+}
+
 .decision-screen {
-  text-align: center;
+  text-align: left;
 }
 
 .decision-title {
@@ -346,7 +380,7 @@ input[type='number'],
 .decision-subtext {
   color: var(--color-muted);
   max-width: 650px;
-  margin: 0 auto 24px;
+  margin: 0 0 24px;
 }
 
 .decision-primary-action {
@@ -355,18 +389,27 @@ input[type='number'],
 
 .decision-primary-action .btn-primary {
   width: 100%;
+  min-height: 56px;
+  font-size: 1.05rem;
+}
+
+.decision-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.decision-btn {
+  width: 100%;
+  min-height: 56px;
   text-align: left;
-  min-height: 82px;
-  font-size: 1.2rem;
 }
 
-.decision-secondary-actions {
-  justify-content: center;
-}
-
-.decision-secondary-actions .btn-secondary,
-.decision-secondary-actions .btn-tertiary {
-  flex: 1 1 240px;
+.decision-btn--tertiary {
+  min-height: 44px;
+  padding: 10px 0;
+  text-align: left;
+  width: fit-content;
 }
 
 .results-screen h2 {
@@ -404,17 +447,19 @@ input[type='number'],
 
 
 .theme-toggle {
-  position: fixed;
-  top: 10px;
-  right: 10px;
+  position: static;
   z-index: 1200;
-  width: 44px;
-  min-height: 44px;
+  inline-size: 44px;
+  min-block-size: 44px;
   border-radius: 999px;
   border: 1px solid var(--color-border);
-  background: color-mix(in srgb, var(--color-surface) 85%, transparent);
+  background: color-mix(in srgb, var(--color-surface) 92%, transparent);
   color: var(--color-text);
   box-shadow: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
 }
 
 .quiz-shell,
@@ -432,7 +477,7 @@ input[type='number'],
 .question-screen .options-container {
   overflow: auto;
   max-height: clamp(220px, 44dvh, 520px);
-  padding-bottom: 8px;
+  padding-bottom: calc(var(--actionbar-h) + env(safe-area-inset-bottom) + 8px);
 }
 
 .action-bar,
@@ -442,6 +487,7 @@ input[type='number'],
   right: 0;
   bottom: 0;
   z-index: 1000;
+  min-height: var(--actionbar-h);
   padding: 10px 14px calc(10px + env(safe-area-inset-bottom));
   background: color-mix(in srgb, var(--color-surface) 88%, transparent);
   backdrop-filter: blur(8px);
@@ -455,11 +501,11 @@ input[type='number'],
 }
 
 .quiz-content {
-  padding-bottom: 100px;
+  padding-bottom: calc(var(--actionbar-h) + env(safe-area-inset-bottom) + 20px);
 }
 
 .results-content {
-  padding-bottom: 116px;
+  padding-bottom: calc(var(--actionbar-h) + env(safe-area-inset-bottom) + 36px);
 }
 
 .send-callout {
@@ -515,7 +561,7 @@ input[type='number'],
   }
 
   .decision-primary-action .btn-primary {
-    min-height: 70px;
+    min-height: 56px;
   }
 
   .results-table,
