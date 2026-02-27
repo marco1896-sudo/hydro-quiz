@@ -22,7 +22,6 @@
 }
 
 
-
 :root[data-theme="dark"] {
   --color-bg: #0f1720;
   --color-surface: #162330;
@@ -42,7 +41,6 @@
   --score-hero-bg: color-mix(in srgb, var(--color-surface) 82%, #0b1520);
   --score-hero-border: color-mix(in srgb, var(--color-border) 92%, #9ecfff 8%);
 }
-
 
 * {
   box-sizing: border-box;
