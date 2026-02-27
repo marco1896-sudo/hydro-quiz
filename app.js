@@ -660,27 +660,42 @@ function renderQuestion() {
 
   // Confidence rating slider (initially ausgeblendet, wird nach Auswahl sichtbar)
   const confidenceDiv = document.createElement('div');
-  confidenceDiv.className = 'confidence-panel';
+  confidenceDiv.className = 'confidence-panel confidence-card';
   confidenceDiv.style.marginTop = '1rem';
   confidenceDiv.style.display = 'none';
   const confLabel = document.createElement('label');
+  confLabel.className = 'confidence-label';
   confLabel.textContent = 'Wie sicher bist du dir? (1 = unsicher, 5 = sehr sicher)';
   confLabel.style.display = 'block';
+  const confHint = document.createElement('p');
+  confHint.className = 'confidence-hint';
+  confHint.textContent = 'Bewerte kurz dein Gefühl zur Antwort, bevor du absendest.';
   const confInput = document.createElement('input');
+  confInput.className = 'confidence-range';
   confInput.type = 'range';
   confInput.min = '1';
   confInput.max = '5';
   confInput.value = '3';
   confInput.step = '1';
   confInput.style.width = '100%';
+  confInput.style.setProperty('--range-percent', '50%');
+  const confScale = document.createElement('div');
+  confScale.className = 'confidence-scale';
+  confScale.innerHTML = '<span>1</span><span>2</span><span>3</span><span>4</span><span>5</span>';
   const confValueSpan = document.createElement('span');
+  confValueSpan.className = 'confidence-value';
   confValueSpan.style.marginLeft = '0.5rem';
   confValueSpan.textContent = confInput.value;
   confInput.addEventListener('input', () => {
     confValueSpan.textContent = confInput.value;
+    const progress = ((Number(confInput.value) - Number(confInput.min)) /
+      (Number(confInput.max) - Number(confInput.min))) * 100;
+    confInput.style.setProperty('--range-percent', `${progress}%`);
   });
   confidenceDiv.appendChild(confLabel);
+  confidenceDiv.appendChild(confHint);
   confidenceDiv.appendChild(confInput);
+  confidenceDiv.appendChild(confScale);
   confidenceDiv.appendChild(confValueSpan);
   container.appendChild(confidenceDiv);
 
