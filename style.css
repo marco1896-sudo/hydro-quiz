@@ -345,6 +345,12 @@ input[type='number'],
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   color: var(--color-text);
+  opacity: 1;
+  filter: none;
+}
+
+.confidence-panel * {
+  opacity: 1;
 }
 
 .confidence-card {
@@ -715,22 +721,23 @@ input[type='number'],
   margin: 10px 0 22px;
   padding: 20px;
   border-radius: var(--radius-md);
-  background: #f8fafc;
+  background: color-mix(in srgb, var(--color-surface) 92%, var(--color-option-bg));
   border: 1px solid var(--color-border);
   text-align: center;
 }
 
 .score-percent {
   font-size: clamp(2.2rem, 6vw, 3rem);
-  font-weight: 700;
+  font-weight: 800;
   color: var(--color-text);
   line-height: 1.1;
+  text-shadow: 0 1px 0 color-mix(in srgb, var(--color-surface) 55%, transparent);
 }
 
 .score-points {
   margin-top: 6px;
   color: var(--color-muted);
-  font-weight: 500;
+  font-weight: 600;
 }
 
 .category-card-grid {
