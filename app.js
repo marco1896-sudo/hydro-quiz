@@ -171,11 +171,13 @@ function renderLanding(resumableData = null) {
     // Fortsetzen im Profi-Modus anbieten, falls vorhanden
     if (resumableData && !resumableData.finished) {
       const resumeBtn = document.createElement('button');
+      resumeBtn.classList.add('btn-secondary');
       resumeBtn.textContent = 'Profi-Modul fortsetzen';
       resumeBtn.addEventListener('click', () => resumeSession(resumableData));
       container.appendChild(resumeBtn);
 
       const resetBtn = document.createElement('button');
+      resetBtn.classList.add('btn-tertiary');
       resetBtn.textContent = 'Profi-Modul reset';
       resetBtn.style.marginLeft = '0.5rem';
       resetBtn.addEventListener('click', () => {
@@ -185,6 +187,7 @@ function renderLanding(resumableData = null) {
       container.appendChild(resetBtn);
 
       const backBtn = document.createElement('button');
+      backBtn.classList.add('btn-secondary');
       backBtn.textContent = 'Zurück zum Basis-Test';
       backBtn.style.marginLeft = '0.5rem';
       backBtn.addEventListener('click', () => {
@@ -199,11 +202,13 @@ function renderLanding(resumableData = null) {
 
     // Kein Profi-Fortsetzen vorhanden -> direkt starten
     const startBtn = document.createElement('button');
+    startBtn.classList.add('btn-primary');
     startBtn.textContent = 'Profi-Modul starten';
     startBtn.addEventListener('click', () => startTest());
     container.appendChild(startBtn);
 
     const backBtn = document.createElement('button');
+    backBtn.classList.add('btn-secondary');
     backBtn.textContent = 'Zurück zum Basis-Test';
     backBtn.style.marginLeft = '0.5rem';
     backBtn.addEventListener('click', () => {
@@ -255,6 +260,7 @@ function renderLanding(resumableData = null) {
 
   // Start button
   const startBtn = document.createElement('button');
+  startBtn.classList.add('btn-primary');
   startBtn.textContent = 'Test starten';
   startBtn.addEventListener('click', () => {
     const selected = [];
@@ -271,6 +277,7 @@ function renderLanding(resumableData = null) {
   // If resumable data exists (session not finished), show resume button
   if (resumableData && !resumableData.finished) {
     const resumeBtn = document.createElement('button');
+    resumeBtn.classList.add('btn-secondary');
     resumeBtn.textContent = 'Fortsetzen';
     resumeBtn.style.marginLeft = '0.5rem';
     resumeBtn.addEventListener('click', () => {
@@ -279,6 +286,7 @@ function renderLanding(resumableData = null) {
     container.appendChild(resumeBtn);
 
     const resetBtn = document.createElement('button');
+    resetBtn.classList.add('btn-tertiary');
     resetBtn.textContent = 'Reset';
     resetBtn.style.marginLeft = '0.5rem';
     resetBtn.addEventListener('click', () => {
@@ -344,7 +352,8 @@ function resumeSession(data) {
 function renderQuestion() {
   // Safety check
   if (state.currentIndex >= state.currentQuestions.length) {
-    finishTest();
+    if (PRO_MODE) finishTest();
+    else renderDecision();
     return;
   }
   const q = state.currentQuestions[state.currentIndex];
@@ -357,9 +366,15 @@ function renderQuestion() {
   progressContainer.className = 'progress-container';
   const progressBar = document.createElement('div');
   progressBar.className = 'progress-bar';
-  const percent = (state.currentIndex / state.currentQuestions.length) * 100;
+  const displayIndex = state.currentIndex + 1;
+  const percent = (displayIndex / state.currentQuestions.length) * 100;
   progressBar.style.width = `${percent}%`;
   progressContainer.appendChild(progressBar);
+
+  const progressText = document.createElement('p');
+  progressText.className = 'progress-text';
+  progressText.textContent = `Frage ${displayIndex} von ${state.currentQuestions.length} • ${Math.round(percent)} %`;
+  progressContainer.appendChild(progressText);
   container.appendChild(progressContainer);
 
   // Question header
@@ -588,6 +603,7 @@ function renderQuestion() {
 
   // Submit button
   const submitBtn = document.createElement('button');
+  submitBtn.classList.add('btn-primary');
   submitBtn.textContent = 'Antwort absenden';
   submitBtn.addEventListener('click', () => {
     // Retrieve selected answer(s) depending on type
@@ -721,11 +737,57 @@ function renderQuestion() {
     if (state.currentIndex < state.currentQuestions.length) {
       renderQuestion();
     } else {
-      finishTest();
+      if (PRO_MODE) finishTest();
+      else renderDecision();
     }
   });
 
   container.appendChild(submitBtn);
+  appEl.appendChild(container);
+}
+
+function renderDecision() {
+  appEl.innerHTML = '';
+
+  const container = document.createElement('div');
+  container.className = 'container';
+
+  const title = document.createElement('h2');
+  title.textContent = 'Wie möchtest du fortfahren?';
+  container.appendChild(title);
+
+  const text = document.createElement('p');
+  text.textContent = 'Das Hydro / Profi-Modul ist optional, deutlich anspruchsvoller und stärker hydro-spezifisch. Deine Teilnahme hilft, die Auswertung und Fragenqualität weiterzuentwickeln.';
+  container.appendChild(text);
+
+  const actions = document.createElement('div');
+  actions.className = 'button-row';
+
+  const proBtn = document.createElement('button');
+  proBtn.classList.add('btn-primary');
+  proBtn.textContent = 'Hydro / Profi-Modul starten';
+  proBtn.addEventListener('click', () => {
+    window.location.search = '?pro=1';
+  });
+  actions.appendChild(proBtn);
+
+  const evalBtn = document.createElement('button');
+  evalBtn.classList.add('btn-secondary');
+  evalBtn.textContent = 'Zur Auswertung';
+  evalBtn.addEventListener('click', () => {
+    finishTest();
+  });
+  actions.appendChild(evalBtn);
+
+  const skipBtn = document.createElement('button');
+  skipBtn.classList.add('btn-tertiary');
+  skipBtn.textContent = 'Überspringen';
+  skipBtn.addEventListener('click', () => {
+    finishTest();
+  });
+  actions.appendChild(skipBtn);
+
+  container.appendChild(actions);
   appEl.appendChild(container);
 }
 
@@ -1086,6 +1148,7 @@ function finishTest() {
   container.appendChild(exportTitle);
 
   const exportCSVBtn = document.createElement('button');
+  exportCSVBtn.classList.add('btn-secondary');
   exportCSVBtn.textContent = 'CSV herunterladen';
   exportCSVBtn.addEventListener('click', () => {
     const { csvContent, filename } = buildCSV();
@@ -1094,6 +1157,7 @@ function finishTest() {
   container.appendChild(exportCSVBtn);
 
   const exportJSONBtn = document.createElement('button');
+  exportJSONBtn.classList.add('btn-secondary');
   exportJSONBtn.textContent = 'JSON herunterladen';
   exportJSONBtn.style.marginLeft = '0.5rem';
   exportJSONBtn.addEventListener('click', () => {
@@ -1104,6 +1168,7 @@ function finishTest() {
 
   // ---- Anonyme Übermittlung an Google Sheets (Apps Script WebApp) ----
   const sendBtn = document.createElement('button');
+  sendBtn.classList.add('btn-primary');
   // Button zum anonymen Übermitteln mit Hinweis auf die Weiterentwicklung
   sendBtn.textContent = 'Ergebnisse anonym senden (unterstützt Weiterentwicklung)';
   sendBtn.style.marginLeft = '0.5rem';
@@ -1178,6 +1243,7 @@ function finishTest() {
 
   if (!PRO_MODE && hasProQuestions) {
     const proBtn = document.createElement('button');
+    proBtn.classList.add('btn-secondary');
     const proCount = questions.filter((q) => q.tier === 'pro').length;
     proBtn.textContent = `Profi-Modul starten (${proCount} Fragen)`;
     proBtn.style.marginLeft = '0.5rem';
@@ -1191,6 +1257,7 @@ function finishTest() {
 
   if (PRO_MODE) {
     const backBtn = document.createElement('button');
+    backBtn.classList.add('btn-secondary');
     backBtn.textContent = 'Zurück zum Basis-Test';
     backBtn.style.marginLeft = '0.5rem';
     backBtn.addEventListener('click', () => {
@@ -1211,6 +1278,7 @@ function finishTest() {
 
   // Button to restart test
   const restartBtn = document.createElement('button');
+  restartBtn.classList.add('btn-tertiary');
   restartBtn.textContent = PRO_MODE ? 'Profi-Modul neu starten' : 'Neu starten';
   restartBtn.style.marginTop = '1rem';
   restartBtn.addEventListener('click', () => {

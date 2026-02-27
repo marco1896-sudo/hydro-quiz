@@ -57,8 +57,17 @@ Regel: Jede Frage hat **1–2 Kategorien**.
 2. Im Basis-Modus ein oder mehrere Module auswählen (oder alle).
 3. Fragen beantworten (Single, Multi, Scenario, ggf. Calc); optional „Weiß nicht“ nutzen.
 4. Confidence-Slider (1–5) setzen.
-5. Ergebnisseite prüfen, optional Export (CSV/JSON) nutzen.
-6. Optional Profi-Modul über Button starten.
+5. Nach dem Basis-Quiz erscheint ein Entscheidungsscreen:
+   - **Hydro / Profi-Modul starten** (optional, über `?pro=1`)
+   - **Zur Auswertung** / **Überspringen** (direkt zur Ergebnisseite)
+6. Ergebnisseite prüfen, optional Export (CSV/JSON) nutzen und anonym senden.
+
+## UI-Verbesserungen
+
+- Fortschritt zeigt visuell + textuell: **„Frage X von Y • Z %“**.
+- Buttons nutzen ein konsistentes System (`btn-primary`, `btn-secondary`, `btn-tertiary`).
+- Mobile-Optimierungen für größere Touch-Ziele, bessere Abstände/Typografie und klar sichtbare Progress-Anzeige.
+- Farb-, Spacing- und Radius-System über zentrale CSS-Variablen in `:root`.
 
 ## Auswertungslogik (konsistent)
 
