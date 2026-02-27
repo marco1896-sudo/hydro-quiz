@@ -17,8 +17,6 @@
   --range-track: color-mix(in srgb, var(--color-border) 78%, var(--color-surface));
   --range-fill: var(--color-primary);
   --range-thumb: var(--color-primary);
-  --score-hero-bg: color-mix(in srgb, var(--color-surface) 92%, var(--color-option-bg));
-  --score-hero-border: var(--color-border);
 }
 
 
@@ -38,8 +36,6 @@
   --range-track: color-mix(in srgb, var(--color-border) 88%, var(--color-surface));
   --range-fill: var(--color-primary);
   --range-thumb: #8cc8ff;
-  --score-hero-bg: color-mix(in srgb, var(--color-surface) 82%, #0b1520);
-  --score-hero-border: color-mix(in srgb, var(--color-border) 92%, #9ecfff 8%);
 }
 
 * {
@@ -725,8 +721,8 @@ input[type='number'],
   margin: 10px 0 22px;
   padding: 20px;
   border-radius: var(--radius-md);
-  background: var(--score-hero-bg);
-  border: 1px solid var(--score-hero-border);
+  background: color-mix(in srgb, var(--color-surface) 92%, var(--color-option-bg));
+  border: 1px solid var(--color-border);
   text-align: center;
 }
 
@@ -805,8 +801,6 @@ input[type='number'],
     --range-track: color-mix(in srgb, var(--color-border) 88%, var(--color-surface));
     --range-fill: var(--color-primary);
     --range-thumb: #8cc8ff;
-    --score-hero-bg: color-mix(in srgb, var(--color-surface) 82%, #0b1520);
-    --score-hero-border: color-mix(in srgb, var(--color-border) 92%, #9ecfff 8%);
   }
 
   :root:not([data-theme='light']) .transparency-block {
